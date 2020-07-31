@@ -17,6 +17,18 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::group(['prefix' => 'admin'], function() {
+Route::group(['prefix' => 'admin', 'middleware' => 'auth'], function() {
     Route::get('posts/create', 'Admin\PostsController@add');
+    Route::post('posts/create', 'Admin\PostsController@create');
 });
+
+Route::get('posts', 'Admin\PostsController@index');
+Route::post('post/review', 'Admin\PostsController@review');
+
+Auth::routes();
+
+Route::get('/home', 'HomeController@index')->name('home');
+
+Auth::routes();
+
+Route::get('/home', 'HomeController@index')->name('home');

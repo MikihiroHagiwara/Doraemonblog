@@ -15,36 +15,62 @@ class PostsController extends Controller
         return view('admin.posts.create');
     }
     
-    //画像及びコメントアップロード
-    public function upload(Request $request) {
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|max:10240|mimes:jpeg,gif,png',
-            'comment' => 'required|max:191'
-        ]);
-        
-        if ($validator->fails()){
-            return back()->withInput()->withErrors($validator);
-        }
-        
-        $file = $request->file('file');
-        $path = Storage::disk('s3')->putFile('/', $file, 'public');
-        
-        Post::create([
-            'image_file_name' => $path,
-            'image_title' => $request->comment
-            ]);
-            
-            return view('admin.posts.create');
+    public function create(Request $request) {
+        return redirect('admin/posts/create');
     }
     
-    public function index(){
-        $posts = \App\Posts::all();
-        
-        $data = [
-            'posts' => $posts,
-        ];
-        
-        return view('welcome',$data);
+    public function index() {
+        return view('posts.index');
+    }
+    
+    public function review(Request $request) {
+
+        $result = false;
+
+        // バリデーション
+        $request->validate([
+            'post_id' => [
+                'required',
+                'exists:posts,id',
+                function($attribute, $value, $fail) use($request) {
+
+                    // ログインしてるかチェック
+                    if(!auth()->check()) {
+
+                        $fail('レビューするにはログインしてください。');
+                        return;
+
+                    }
+
+                    // すでにレビュー投稿してるかチェック
+                    $exists = \App\Review::where('user_id', $request->user()->id)
+                        ->where('post_id', $request->post_id)
+                        ->exists();
+
+                    if($exists) {
+
+                        $fail('すでにレビューは投稿済みです。');
+                        return;
+
+                    }
+
+                }
+            ],
+            'stars' => 'required|integer|min:1|max:5',
+            'comment' => 'required'
+        ]);
+
+        $review = new \App\Review();
+        $review->post_id = $request->post_id;
+        $review->user_id = $request->user()->id;
+        $review->stars = $request->stars;
+        $review->comment = $request->comment;
+        $result = $review->save();
+        return ['result' => $result];
+
     }
 }
+    
+
+
 
